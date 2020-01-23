@@ -4,21 +4,19 @@
 const mariadb = require('mariadb');
 const pool = mariadb.createPool({host: "localhost", user: "admin2", password: "1234", connectionLimit: 5, database: "mphirschmann"});
 
-// Für die Connection auf die DB -- GET
-async function asyncFunction(wtable) {
+// -------------------------------------------------------------------------------------------------------
+
+// Für die Connection auf die DB -- GET ALL
+async function getallAsyncFunction(wtable) {
   let conn;
   try {
     conn = await pool.getConnection();
-    if(wtable === String){
-      const rows = await conn.query("SELECT * FROM " + wtable);
+    if(wtable != null){
+      const rows = await conn.query("SELECT * FROM " + wtable + ";");
       return rows;
-      // rows: [ {val: 1}, meta: ... ]
-   
-      // const res = await conn.query("INSERT INTO myTable value (?, ?)", [1, "mariadb"]);
-      // res: { affectedRows: 1, insertId: 1, warningStatus: 0 }
     }
     else{
-      console.log("Fehler bei === String.")
+      console.log("An error occured, while trying to get all.")
     }
   } catch (err) {
     throw err;
@@ -27,13 +25,89 @@ async function asyncFunction(wtable) {
   }
 }
 
+// -------------------------------------------------------------------------------------------------------
+
+async function postAsyncFunction(){
+  let conn;
+  try{
+    let rows;
+    conn = await pool.getConnection();
+
+    // TOUR
+    if (arguments[0] == "tour"){
+      rows = await conn.query('INSERT INTO TOUR (title, reversible, template_id, guide, date) values (?, ?, ?, ?, ?)', 
+        [arguments[1], arguments[2], arguments[3], arguments[4], arguments[5]]);
+    
+    // STATION
+    } else if (arguments[0] == "station"){
+      rows = await conn.query('INSERT INTO STATION (name, area_id) values (?, ?)', 
+        [arguments[1], arguments[2], arguments[3]]);
+    
+    // TEXT
+    } else if (arguments[0] == "text"){
+      rows = await conn.query('INSERT INTO TEXT (text) values (?)', 
+        [arguments[1]]);
+    
+    // MEDIA
+    } else if (arguments[0] == "media"){
+      rows = await conn.query('INSERT INTO MEDIA (language_id, text_id, station_id) values (?, ?, ?)', 
+        [arguments[1], arguments[2], arguments[3]]);
+
+    // LANGUAGE
+    } else if (arguments[0] == "language"){
+      rows = await conn.query('INSERT INTO LANGUAGE (name) values (?)', 
+        [arguments[1]]);
+
+    // AREA
+    } else if (arguments[0] == "area"){
+      rows = await conn.query('INSERT INTO AREA (title, position) values (?, ?)', 
+        [arguments[1], arguments[2]]);
+    
+    } else{
+      console.log("Ein Fehler ist aufgetreten!! Siehe postAsyncFunction");
+      rows = null;
+    }
+
+    return rows;
+
+  } catch(err){
+    throw err;
+  } finally{
+    if (conn) conn.release(); //release to pool
+  }
+}
+
+// -------------------------------------------------------------------------------------------------------
+
+async function deleteAsyncFunction(table, id){
+  let conn;
+  try{
+    conn = await pool.getConnection();
+    if (table != null && id != null) {
+      const rows = await conn.query("DELETE FROM " + table + " WHERE id=" + id + ";");
+      return rows;
+    }
+    else{
+      console.log("An error occured, while trying to delete.")
+    }
+  }catch(err){
+    throw err;
+  } finally {
+    if (conn) conn.release(); //release to pool
+  }
+}
+
+// -------------------------------------------------------------------------------------------------------
+
 
 // Ausgabe im Browser
 const express = require('express');
 const app = express();
 const port = 3000;
 const cors = require('cors');
-// app.use(cors());
+
+app.use(express.json()); // for parsing application/json
+app.use(express.urlencoded({ extended: true }));
 app.use((req,res,next) => {
   // CORS, damit keine Violation auftritt
   res.header('Access-Control-Allow-Origin', '*');
@@ -44,19 +118,109 @@ app.use((req,res,next) => {
   next();
 });
 
+// -------------------------------------------------------------------------------------------------------
 
 // GET ALL
+// Touren
 app.get('/tours', cors(), (req, res) => {
-    asyncFunction("TOUR").then(function(val){ // ruft die funktion auf und wenn fertig (then), dann wird die funktion mit den return wert von der funktion gemacht und der wert mit val ausgegeben
+  getallAsyncFunction("TOUR").then(function(val){ // ruft die funktion auf und wenn fertig (then), dann wird die funktion mit den return wert von der funktion gemacht und der wert mit val ausgegeben
         res.json(val);
     });
 });
 
-// funktioniert nicht
+// Stationen
 app.get('/stations', cors(), (req, res) => {
-  asyncFunction("STATION").then(function(val){
+  getallAsyncFunction("STATION").then(function(val){
       res.json(val);
   });
 });
+
+// Templates
+app.get('/templates', cors(), (req, res) => {
+  getallAsyncFunction("TEMPLATE").then(function(val){
+      res.json(val);
+  });
+});
+
+// Languages
+app.get('/languages', cors(), (req, res) => {
+  getallAsyncFunction("LANGUAGE").then(function(val){
+      res.json(val);
+  });
+});
+
+// Area
+app.get('/areas', cors(), (req, res) => {
+  getallAsyncFunction("AREA").then(function(val){
+      res.json(val);
+  });
+});
+
+
+// ------------------------------------------------------------------------
+
+// POST
+// Tour
+app.post('/posttour', cors(), (req, res) => {
+  // console.log(req.body);
+  postAsyncFunction("tour", req.body.title, req.body.reversible, req.body.template_id, req.body.guide, req.body.date).then(function(val){
+    res.json(val);
+  });
+});
+
+// Station
+app.post('/poststation', cors(), (req, res) => {
+  postAsyncFunction("station", req.body.name, req.body.area_id).then(function(val){
+    res.json(val);
+  });
+});
+
+// Language
+app.post('/postlanguage', cors(), (req, res) => {
+  postAsyncFunction("language", req.body.name).then(function(val){
+    res.json(val);
+  });
+});
+
+// Area
+app.post('/postarea', cors(), (req, res) => {
+  postAsyncFunction("area", req.body.title, req.body.position).then(function(val){
+    res.json(val);
+  });
+});
+
+// Text & MEDIA ADDEN
+app.post('/posttext', cors(), (req, res) => {
+  postAsyncFunction("text", req.body.text).then(function(val){
+    postAsyncFunction("media", 3, val.insertId, req.body.station_id).then(function(val){
+      res.json(val);
+    });
+  });
+});
+
+// Tour & Zw.-Tabelle
+app.post('/posttour', cors(), (req, res) => {
+  postAsyncFunction("tour", req.body.title, req.body.reversible, req.body.template_id, req.body.guide, req.body.date).then(function(val){
+    postAsyncFunction("tourhstation", val.insertId, req.body.station_id, req.body.media_id).then(function(val){
+      res.json(val);
+    });
+  });
+});
+
+// ------------------------------------------------------------------------
+
+// UPDATE
+
+
+// ------------------------------------------------------------------------
+
+// DELETE
+app.delete('/delete', cors(), (req, res) =>{
+  deleteAsyncFunction(req.body.table.toUpperCase(), req.body.id).then(function(val){
+    res.json(val);
+  });
+});
+
+// ------------------------------------------------------------------------
 
 app.listen(port, () => console.log(`App listening on port ${port}!`));
