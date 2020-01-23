@@ -37,6 +37,11 @@ async function postAsyncFunction(){
     if (arguments[0] == "tour"){
       rows = await conn.query('INSERT INTO TOUR (title, reversible, template_id, guide, date) values (?, ?, ?, ?, ?)', 
         [arguments[1], arguments[2], arguments[3], arguments[4], arguments[5]]);
+
+        
+    } else if (arguments[0] == "tourhstation"){
+      rows = await conn.query('INSERT INTO TOUR_HAS_STATION (tour_id, station_id, media_id, ordernumber) values (?, ?, ?, ?)', 
+        [arguments[1], arguments[2], arguments[3], arguments[4]]);
     
     // STATION
     } else if (arguments[0] == "station"){
@@ -84,11 +89,55 @@ async function deleteAsyncFunction(table, id){
   try{
     conn = await pool.getConnection();
     if (table != null && id != null) {
-      const rows = await conn.query("DELETE FROM " + table + " WHERE id=" + id + ";");
+
+      // auf anderen Tabellen löschen
+      if (table == "TOUR"){
+        rows = await conn.query("DELETE FROM TOUR_HAS_STATION WHERE tour_id=" + id + ";");
+        
+      } else if (table == "STATION"){
+        deleteMediaAsyncFunction(id, "TEXT", table.toLowerCase());
+
+      } else if (table == "MEDIA"){
+        deleteMediaAsyncFunction(id, "TEXT", table.toLowerCase());
+
+      } else if (table == "TEMPLATE"){
+        rows = await conn.query("DELETE FROM TEMPLATE_HAS_STATION WHERE template_id=" + id + ";");
+        // Replace template_id in TOUR with NULL
+
+      }
+
+      // auf eigentlicher Tabelle löschen
+      rows = await conn.query("DELETE FROM " + table + " WHERE id=" + id + ";");
       return rows;
     }
     else{
       console.log("An error occured, while trying to delete.")
+    }
+  }catch(err){
+    throw err;
+  } finally {
+    if (conn) conn.release(); //release to pool
+  }
+}
+
+
+// funktioniert noch nicht!!!!
+async function deleteMediaAsyncFunction(id, mediatype, type){
+  let conn;
+  let m_id = id;
+  try{
+    conn = await pool.getConnection();
+    if (type != null && id != null) {
+      // sollte die text_id sein? oder die file_id? wie kann man die bekommen?
+      rows = await conn.query("DELETE FROM " + mediatype + " WHERE id=" + m_id + ";");
+      rows = (type == "media" ? null : await conn.query("DELETE FROM MEDIA WHERE id=" + id + ";"));
+      
+      rows = await conn.query("DELETE FROM TEMPLATE_HAS_STATION WHERE " + type + "_id=" + id + ";");
+      rows = await conn.query("DELETE FROM TOUR_HAS_STATION WHERE " + type + "_id=" + id + ";");
+      return rows;
+    }
+    else{
+      console.log("An error occured.")
     }
   }catch(err){
     throw err;
@@ -160,14 +209,6 @@ app.get('/areas', cors(), (req, res) => {
 // ------------------------------------------------------------------------
 
 // POST
-// Tour
-app.post('/posttour', cors(), (req, res) => {
-  // console.log(req.body);
-  postAsyncFunction("tour", req.body.title, req.body.reversible, req.body.template_id, req.body.guide, req.body.date).then(function(val){
-    res.json(val);
-  });
-});
-
 // Station
 app.post('/poststation', cors(), (req, res) => {
   postAsyncFunction("station", req.body.name, req.body.area_id).then(function(val){
@@ -201,7 +242,7 @@ app.post('/posttext', cors(), (req, res) => {
 // Tour & Zw.-Tabelle
 app.post('/posttour', cors(), (req, res) => {
   postAsyncFunction("tour", req.body.title, req.body.reversible, req.body.template_id, req.body.guide, req.body.date).then(function(val){
-    postAsyncFunction("tourhstation", val.insertId, req.body.station_id, req.body.media_id).then(function(val){
+    postAsyncFunction("tourhstation", val.insertId, req.body.station_id, req.body.media_id, req.body.ordernumber).then(function(val){
       res.json(val);
     });
   });
