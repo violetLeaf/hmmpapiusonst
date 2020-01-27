@@ -27,6 +27,27 @@ async function getallAsyncFunction(wtable) {
 
 // -------------------------------------------------------------------------------------------------------
 
+async function getAsyncFunction(table, id) {
+  let conn;
+  let rows;
+  try {
+    conn = await pool.getConnection();
+    if ( table == "stations4T"){
+      rows = await conn.query("SELECT * FROM `tour_has_station` JOIN `station` ON `station`.`id` = `tour_has_station`.`station_id` WHERE `tour_id` = " + id + " ORDER BY `ordernumber`;");
+    }
+    else if (table == "media4S4T"){
+      rows = await conn.query("SELECT * FROM `media` JOIN `TEXT` ON `text`.`id` = `media`.`text_id` WHERE `text_id` = " + id + ";");
+    }
+    return rows;
+  } catch (err) {
+    throw err;
+  } finally {
+    if (conn) conn.release(); //release to pool
+  }
+}
+
+// -------------------------------------------------------------------------------------------------------
+
 async function postAsyncFunction(){
   let conn;
   try{
@@ -160,10 +181,8 @@ app.use(express.urlencoded({ extended: true }));
 app.use((req,res,next) => {
   // CORS, damit keine Violation auftritt
   res.header('Access-Control-Allow-Origin', '*');
-  res.header(
-    'Access-Control-Allow-Headers',
-    'Origin, X-Requested-With, Content-Type, Accept',
-  );
+  res.header('Access-Control-Allow-Headers', 'Origin, X-Requested-With, Content-Type, Accept');
+  res.header("Access-Control-Allow-Methods", "GET, PUT, POST, DELETE");
   next();
 });
 
@@ -205,6 +224,22 @@ app.get('/areas', cors(), (req, res) => {
   });
 });
 
+// -------------------------------------------------------------------------------------------------------
+
+// GETs
+// Stations when in Tour
+app.get('/stationsfortour/:id', cors(), (req, res) => {
+  getAsyncFunction("stations4T", req.params.id).then(function(val){
+    res.json(val);
+  });
+});
+
+// Medias when in Station when in Tour
+app.get('/mediasforstationsfortour/:id', cors(), (req, res) => {
+  getAsyncFunction("media4S4T", req.params.id).then(function(val){
+      res.json(val);
+  });
+});
 
 // ------------------------------------------------------------------------
 
@@ -241,12 +276,18 @@ app.post('/posttext', cors(), (req, res) => {
 
 // Tour & Zw.-Tabelle
 app.post('/posttour', cors(), (req, res) => {
-  postAsyncFunction("tour", req.body.title, req.body.reversible, req.body.template_id, req.body.guide, req.body.date).then(function(val){
-    postAsyncFunction("tourhstation", val.insertId, req.body.station_id, req.body.media_id, req.body.ordernumber).then(function(val){
+  postAsyncFunction("tour", req.body[0].title, req.body[0].reversible, req.body[0].template_id, req.body[0].guide, req.body[0].date).then(function(val){
+    postAsyncFunction("tourhstation", val.insertId, req.body[1].station_id, req.body[1].media_id, req.body[1].ordernumber).then(function(val){
       res.json(val);
     });
   });
 });
+
+// app.post('/posttourstations', cors(), (req, res) => {
+//   postAsyncFunction("tourhstation", val.insertId, req.body.station_id, req.body.media_id, req.body.ordernumber).then(function(val){
+//     res.json(val);
+//   });
+// });
 
 // ------------------------------------------------------------------------
 
