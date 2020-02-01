@@ -38,6 +38,9 @@ async function getAsyncFunction(table, id) {
     else if (table == "media4S4T"){
       rows = await conn.query("SELECT * FROM `media` JOIN `TEXT` ON `text`.`id` = `media`.`text_id` WHERE `text_id` = " + id + ";");
     }
+    else if (table == "media4Station"){
+      rows = await conn.query("SELECT * FROM `media` JOIN `TEXT` ON `text`.`id` = `media`.`text_id` WHERE `station_id` = " + id + ";");
+    }
     return rows;
   } catch (err) {
     throw err;
@@ -67,7 +70,7 @@ async function postAsyncFunction(){
     // STATION
     } else if (arguments[0] == "station"){
       rows = await conn.query('INSERT INTO STATION (name, area_id) values (?, ?)', 
-        [arguments[1], arguments[2], arguments[3]]);
+        [arguments[1], arguments[2]]);
     
     // TEXT
     } else if (arguments[0] == "text"){
@@ -237,6 +240,13 @@ app.get('/stationsfortour/:id', cors(), (req, res) => {
 // Medias when in Station when in Tour
 app.get('/mediasforstationsfortour/:id', cors(), (req, res) => {
   getAsyncFunction("media4S4T", req.params.id).then(function(val){
+      res.json(val);
+  });
+});
+
+// Medias when in Station when in Tour
+app.get('/mediasforstation/:id', cors(), (req, res) => {
+  getAsyncFunction("media4Station", req.params.id).then(function(val){
       res.json(val);
   });
 });
