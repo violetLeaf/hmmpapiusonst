@@ -27,19 +27,21 @@ async function getallAsyncFunction(wtable) {
 
 // -------------------------------------------------------------------------------------------------------
 
-async function getAsyncFunction(table, id) {
+async function getAsyncFunction() {
   let conn;
   let rows;
   try {
     conn = await pool.getConnection();
-    if ( table == "stations4T"){
-      rows = await conn.query("SELECT * FROM `tour_has_station` JOIN `station` ON `station`.`id` = `tour_has_station`.`station_id` WHERE `tour_id` = " + id + " ORDER BY `ordernumber`;");
+    if (arguments[0] == "stations4T"){
+      rows = await conn.query("SELECT * FROM `tour_has_station` JOIN `station` ON `station`.`id` = `tour_has_station`.`station_id` WHERE `tour_id` = " + arguments[1] + " ORDER BY `ordernumber`;");
     }
-    else if (table == "media4S4T"){
-      rows = await conn.query("SELECT * FROM `media` JOIN `TEXT` ON `text`.`id` = `media`.`text_id` WHERE `text_id` = " + id + ";");
+    else if (arguments[0] == "media4S4T"){
+      rows = await conn.query("SELECT * FROM `media` JOIN tour_has_station ON tour_has_station.media_id WHERE tour_has_station.station_id = " + arguments[1] + " AND media.station_id = " + arguments[1] + 
+        " AND tour_has_station.tour_id = " + arguments[2] + ";")
+      // rows = await conn.query("SELECT * FROM `media` JOIN `TEXT` ON `text`.`id` = `media`.`text_id` WHERE `text_id` = " + arguments[1] + ";");
     }
-    else if (table == "media4Station"){
-      rows = await conn.query("SELECT * FROM `media` JOIN `TEXT` ON `text`.`id` = `media`.`text_id` WHERE `station_id` = " + id + ";");
+    else if (arguments[0] == "media4Station"){
+      rows = await conn.query("SELECT * FROM `media` JOIN `TEXT` ON `text`.`id` = `media`.`text_id` WHERE `station_id` = " + arguments[1] + ";");
     }
     return rows;
   } catch (err) {
@@ -148,13 +150,14 @@ async function deleteAsyncFunction(table, id){
 // funktioniert noch nicht!!!!
 async function deleteMediaAsyncFunction(id, mediatype, type){
   let conn;
-  let m_id = id;
+  let m_id;
   try{
     conn = await pool.getConnection();
     if (type != null && id != null) {
       // sollte die text_id sein? oder die file_id? wie kann man die bekommen?
-      rows = await conn.query("DELETE FROM " + mediatype + " WHERE id=" + m_id + ";");
+      m_id = await conn.query("SELECT `text_id` FROM MEDIA WHERE `id` = " + id + ";");
       rows = (type == "media" ? null : await conn.query("DELETE FROM MEDIA WHERE id=" + id + ";"));
+      rows = await conn.query("DELETE FROM " + mediatype + " WHERE id=" + m_id + ";");
       
       rows = await conn.query("DELETE FROM TEMPLATE_HAS_STATION WHERE " + type + "_id=" + id + ";");
       rows = await conn.query("DELETE FROM TOUR_HAS_STATION WHERE " + type + "_id=" + id + ";");
@@ -238,8 +241,8 @@ app.get('/stationsfortour/:id', cors(), (req, res) => {
 });
 
 // Medias when in Station when in Tour
-app.get('/mediasforstationsfortour/:id', cors(), (req, res) => {
-  getAsyncFunction("media4S4T", req.params.id).then(function(val){
+app.get('/mediasforstationsfortour/:idS/:idT', cors(), (req, res) => {
+  getAsyncFunction("media4S4T", req.params.idS, req.params.idT).then(function(val){
       res.json(val);
   });
 });
