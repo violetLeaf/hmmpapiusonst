@@ -281,7 +281,7 @@ app.post('/postarea', cors(), (req, res) => {
 // Text & MEDIA ADDEN
 app.post('/posttext', cors(), (req, res) => {
   postAsyncFunction("text", req.body.text).then(function(val){
-    postAsyncFunction("media", 3, val.insertId, req.body.station_id).then(function(val){
+    postAsyncFunction("media", req.body.language_id, val.insertId, req.body.station_id).then(function(val){
       res.json(val);
     });
   });
