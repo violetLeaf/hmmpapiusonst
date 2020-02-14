@@ -288,19 +288,26 @@ app.post('/posttext', cors(), (req, res) => {
 });
 
 // Tour & Zw.-Tabelle
+// app.post('/posttour', cors(), (req, res) => {
+//   postAsyncFunction("tour", req.body[0].title, req.body[0].reversible, req.body[0].template_id, req.body[0].guide, req.body[0].date).then(function(val){
+//     postAsyncFunction("tourhstation", val.insertId, req.body[1].station_id, req.body[1].media_id, req.body[1].ordernumber).then(function(val){
+//       res.json(val);
+//     });
+//   });
+// });
+
+// Tour & Zw.-Tabelle
 app.post('/posttour', cors(), (req, res) => {
-  postAsyncFunction("tour", req.body[0].title, req.body[0].reversible, req.body[0].template_id, req.body[0].guide, req.body[0].date).then(function(val){
-    postAsyncFunction("tourhstation", val.insertId, req.body[1].station_id, req.body[1].media_id, req.body[1].ordernumber).then(function(val){
-      res.json(val);
-    });
+  postAsyncFunction("tour", req.body.title, req.body.reversible, req.body.template_id, req.body.guide, req.body.date).then(function(val){
+    res.json(val);
   });
 });
 
-// app.post('/posttourstations', cors(), (req, res) => {
-//   postAsyncFunction("tourhstation", val.insertId, req.body.station_id, req.body.media_id, req.body.ordernumber).then(function(val){
-//     res.json(val);
-//   });
-// });
+app.post('/posttourstations', cors(), (req, res) => {
+  postAsyncFunction("tourhstation", req.body.tour_id, req.body.station_id, req.body.media_id, req.body.ordernumber).then(function(val){
+    res.json(val);
+  });
+});
 
 // ------------------------------------------------------------------------
 
