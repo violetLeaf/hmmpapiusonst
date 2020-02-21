@@ -110,6 +110,46 @@ async function postAsyncFunction(){
 
 // -------------------------------------------------------------------------------------------------------
 
+async function updateAsyncFunction(){
+  let conn;
+  try{
+    let rows;
+    conn = await pool.getConnection();
+
+    // LANGUAGE
+    if (arguments[0] == "language"){
+      rows = await conn.query('UPDATE `language` SET `name`="' + arguments[2] + '" WHERE id = ' + arguments[1] + ";");
+    }
+
+    else if (arguments[0] == "area"){
+        rows = await conn.query('UPDATE `area` SET `title`="' + arguments[2] + '" WHERE id=' + arguments[1] + ";");
+    }
+
+    else if (arguments[0] == "areapos"){
+      rows = await conn.query('UPDATE `area` SET  `position`="' + (arguments[1] == "up" ? (arguments[3] + 1) : (arguments[3] - 1)) + '" WHERE position=' + arguments[3] + ";");
+      rows = await conn.query('UPDATE `area` SET  `position`="' + arguments[3] + '" WHERE id=' + arguments[2] + ";");
+    }
+
+    else if (arguments[0] = "station"){
+      rows = await conn.query('UPDATE `station` SET `name`="' + arguments[2] + '", `area_id`=' + arguments[3] + ' WHERE id=' + arguments[1] + ";");
+    }
+
+    else{
+      console.log("Ein Fehler ist aufgetreten!! Siehe updateAsyncFunction");
+      rows = null;
+    }
+
+    return rows;
+
+  } catch(err){
+    throw err;
+  } finally{
+    if (conn) conn.release(); //release to pool
+  }
+}
+
+// -------------------------------------------------------------------------------------------------------
+
 async function deleteAsyncFunction(table, id){
   let conn;
   try{
@@ -121,7 +161,14 @@ async function deleteAsyncFunction(table, id){
         rows = await conn.query("DELETE FROM TOUR_HAS_STATION WHERE tour_id=" + id + ";");
         
       } else if (table == "STATION"){
-        deleteMediaAsyncFunction(id, "TEXT", table.toLowerCase());
+        // rows = await conn.query("DELETE FROM `station`
+        // JOIN media ON station.id = media.station_id
+        // LEFT JOIN text ON text.id = media.text_id
+        // LEFT JOIN file ON file.id = media.file_id
+        // LEFT JOIN template_has_station ON station.id = template_has_station.station_id
+        // LEFT JOIN tour_has_station ON station.id = tour_has_station.station_id
+        // WHERE id = 62");
+        rows = conn.query("DELTE FROM ")
 
       } else if (table == "MEDIA"){
         deleteMediaAsyncFunction(id, "TEXT", table.toLowerCase());
@@ -312,7 +359,33 @@ app.post('/posttourstations', cors(), (req, res) => {
 // ------------------------------------------------------------------------
 
 // UPDATE
+// Language
+app.put('/updatelanguage', cors(), (req, res) =>{
+  updateAsyncFunction("language", req.body.id, req.body.name).then(function(val){
+    res.json(val);
+  });
+});
 
+// Area
+app.put('/updatearea', cors(), (req, res) =>{
+  updateAsyncFunction("area", req.body.id, req.body.title).then(function(val){
+    res.json(val);
+  });
+});
+
+// Update Area Position
+app.put('/updateareapos', cors(), (req, res) =>{
+  updateAsyncFunction("areapos", req.body.direction, req.body.id, req.body.position).then(function(val){
+    res.json(val);
+  });
+});
+
+// Station
+app.put('/updatestation', cors(), (req, res) =>{
+  updateAsyncFunction("station", req.body.id, req.body.name, req.body.area_id, req.body.ordernumber).then(function(val){
+    res.json(val);
+  });
+});
 
 // ------------------------------------------------------------------------
 
