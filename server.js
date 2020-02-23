@@ -41,7 +41,8 @@ async function getAsyncFunction() {
       // rows = await conn.query("SELECT * FROM `media` JOIN `TEXT` ON `text`.`id` = `media`.`text_id` WHERE `text_id` = " + arguments[1] + ";");
     }
     else if (arguments[0] == "media4Station"){
-      rows = await conn.query("SELECT * FROM `media` JOIN `TEXT` ON `text`.`id` = `media`.`text_id` WHERE `station_id` = " + arguments[1] + ";");
+      rows = await conn.query("SELECT media.id, `caption`, `language_id`, text.text, file.destinationurl FROM `media`"
+      + " LEFT JOIN file ON file.id = media.file_id LEFT JOIN `TEXT` ON `text`.`id` = `media`.`text_id` WHERE `station_id` = " + arguments[1] + ";");
     }
     return rows;
   } catch (err) {
@@ -159,24 +160,34 @@ async function deleteAsyncFunction(table, id){
       // auf anderen Tabellen löschen
       if (table == "TOUR"){
         rows = await conn.query("DELETE FROM TOUR_HAS_STATION WHERE tour_id=" + id + ";");
-        
+        // -----------------------------------------------------------------------------------
       } else if (table == "STATION"){
-        // rows = await conn.query("DELETE FROM `station`
-        // JOIN media ON station.id = media.station_id
-        // LEFT JOIN text ON text.id = media.text_id
-        // LEFT JOIN file ON file.id = media.file_id
-        // LEFT JOIN template_has_station ON station.id = template_has_station.station_id
-        // LEFT JOIN tour_has_station ON station.id = tour_has_station.station_id
-        // WHERE id = 62");
-        rows = conn.query("DELTE FROM ")
+        media = await conn.query("SELECT `file_id`, `text_id` FROM `media` WHERE `station_id`=" + id + ";");
+        rows = await conn.query("DELETE FROM MEDIA WHERE station_id=" + id + ";");
 
+        for (var i = 0; i < media.length; i++){
+          rows = await conn.query("DELETE FROM " + (media[i].text_id == null && media[i].file_id != null? "FILE" + " WHERE id=" + media[i].file_id : "TEXT" + " WHERE id=" + media[i].text_id) + ";");
+        }
+        
+        rows = await conn.query("DELETE FROM TEMPLATE_HAS_STATION WHERE station_id=" + id + ";");
+        rows = await conn.query("DELETE FROM TOUR_HAS_STATION WHERE station_id=" + id + ";");
+        // -----------------------------------------------------------------------------------
       } else if (table == "MEDIA"){
-        deleteMediaAsyncFunction(id, "TEXT", table.toLowerCase());
+        media = await conn.query("SELECT `file_id`, `text_id` FROM `media` WHERE `id`=" + id + ";");
+        rows = await conn.query("DELETE FROM MEDIA WHERE id=" + id + ";");
 
+        for (var i = 0; i < media.length; i++){
+          rows = await conn.query("DELETE FROM " + (media[i].text_id == null && media[i].file_id != null? "FILE WHERE id=" + media[i].file_id : "TEXT WHERE id=" + media[i].text_id) + ";");
+        }
+        
+        rows = await conn.query("DELETE FROM TEMPLATE_HAS_STATION WHERE media_id=" + id + ";");
+        rows = await conn.query("DELETE FROM TOUR_HAS_STATION WHERE media_id=" + id + ";");
+        // -----------------------------------------------------------------------------------
       } else if (table == "TEMPLATE"){
         rows = await conn.query("DELETE FROM TEMPLATE_HAS_STATION WHERE template_id=" + id + ";");
         // Replace template_id in TOUR with NULL
-
+        
+        // ----------------------------------------------------------------------------------- 
       }
 
       // auf eigentlicher Tabelle löschen
@@ -185,33 +196,6 @@ async function deleteAsyncFunction(table, id){
     }
     else{
       console.log("An error occured, while trying to delete.")
-    }
-  }catch(err){
-    throw err;
-  } finally {
-    if (conn) conn.release(); //release to pool
-  }
-}
-
-
-// funktioniert noch nicht!!!!
-async function deleteMediaAsyncFunction(id, mediatype, type){
-  let conn;
-  let m_id;
-  try{
-    conn = await pool.getConnection();
-    if (type != null && id != null) {
-      // sollte die text_id sein? oder die file_id? wie kann man die bekommen?
-      m_id = await conn.query("SELECT `text_id` FROM MEDIA WHERE `id` = " + id + ";");
-      rows = (type == "media" ? null : await conn.query("DELETE FROM MEDIA WHERE id=" + id + ";"));
-      rows = await conn.query("DELETE FROM " + mediatype + " WHERE id=" + m_id + ";");
-      
-      rows = await conn.query("DELETE FROM TEMPLATE_HAS_STATION WHERE " + type + "_id=" + id + ";");
-      rows = await conn.query("DELETE FROM TOUR_HAS_STATION WHERE " + type + "_id=" + id + ";");
-      return rows;
-    }
-    else{
-      console.log("An error occured.")
     }
   }catch(err){
     throw err;
