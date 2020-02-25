@@ -40,7 +40,7 @@ async function getAsyncFunction() {
   try {
     conn = await pool.getConnection();
     if (arguments[0] == "stations4T"){
-      rows = await conn.query("SELECT * FROM `tour_has_station` JOIN `station` ON `station`.`id` = `tour_has_station`.`station_id` WHERE `tour_id` = " + arguments[1] + " ORDER BY `ordernumber`;");
+      rows = await conn.query("SELECT DISTINCT tour_id, station_id, ordernumber FROM `tour_has_station` JOIN `station` ON `station`.`id` = `tour_has_station`.`station_id` WHERE `tour_id` = " + arguments[1] + " ORDER BY `ordernumber`;");
     }
     else if (arguments[0] == "media4S4T"){
       rows = await conn.query("SELECT * FROM `media` JOIN tour_has_station ON tour_has_station.media_id WHERE tour_has_station.station_id = " + arguments[1] + " AND media.station_id = " + arguments[1] + 
