@@ -5,6 +5,9 @@ const mariadb = require('mariadb');
 const pool = mariadb.createPool({host: "localhost", user: "admin2", password: "1234", connectionLimit: 5, database: "mphirschmann"});
 
 const fs = require('fs');
+const archiver = require('archiver');
+
+const path = require('path');
 
 // -------------------------------------------------------------------------------------------------------
 
@@ -439,13 +442,14 @@ async function appAsyncFunction() {
 // GET all Touren
 let data;
 
-app.get('/tours', cors(), (req, res) => {
+app.get('/toursapp', cors(), (req, res) => {
   appAsyncFunction("TOUR").then(function(val){ // ruft die funktion auf und wenn fertig (then), dann wird die funktion mit den return wert von der funktion gemacht und der wert mit val ausgegeben
     res.json(val);
   });
 });
 
-app.get('/tour/:id', cors(), async (req, res) => {
+// GET each Tour
+app.get('/tourapp/:id', cors(), async (req, res) => {
   let tour = await appAsyncFunction("TOUReinzeln", req.params.id);
 
   let result = {
@@ -524,23 +528,51 @@ let areas = await appAsyncFunction("AREA", tour[0].id);
   }
   catch{ console.log("Tours Repository already exists.");}
   finally{}
-  fs.mkdirSync('tours/tour_' + result.id);
-  fs.mkdirSync('tours/tour_' + result.id + '/media');
+  // fs.mkdirSync('tours/tour_' + result.id);
+  // fs.mkdirSync('tours/tour_' + result.id + '/media');
         
-  fs.writeFile('tours/tour_' + result.id + '/route.json', data, (err)=>{
-    if (err) throw err;
-    console.log("Data written to file.");
+  // fs.writeFile('tours/tour_' + result.id + '/route.json', data, (err)=>{
+  //   if (err) throw err;
+  //   console.log("Data written to file.");
+  // });
+
+  // https://www.npmjs.com/package/archiver
+  var output = fs.createWriteStream('tourszip/tour_' + result.id + '.zip');
+  var archive = archiver('zip', {
+    zlib: { level: 9 } // Sets the compression level.
   });
+  archive.pipe(output);
+
+  archive.append(data, {'name': "route.json"});
+  archive.finalize();
 });
 
 // noch prüfen
-app.get('/download/:filename', function(req, res){
+app.get('/downloadfile/:filename', function(req, res){
   const file = `${__dirname}/media/` + req.params.filename;
   console.log(file);
   res.download(file); // Set disposition and send it.
 });
 
-  // (() => {
-  //   const deletedPaths = del(['tour/**', '!tour']);
-  //   console.log('Deleted files and directories:\n', deletedPaths.join('\n'));
-  // })();
+app.get('/download/:id', function(req, res){
+  const tour = `${__dirname}/tourszip/tour_` + req.params.id + '.zip';
+  console.log(tour);
+  res.download(tour); // Set disposition and send it.
+});
+
+app.delete('/deletetoursapp', function(req, res){
+  // https://stackoverflow.com/a/42182416
+  const directory = 'tourszip';
+
+  fs.readdir(directory, (err, files) => {
+    if (err) throw err;
+
+    for (const file of files) {
+      fs.unlink(path.join(directory, file), err => {
+        if (err) throw err;
+      });
+    }
+
+    res.json();
+  });
+});
