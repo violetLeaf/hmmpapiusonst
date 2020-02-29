@@ -363,7 +363,7 @@ app.put('/updateareapos', cors(), (req, res) =>{
 
 // Station
 app.put('/updatestation', cors(), (req, res) =>{
-  updateAsyncFunction("station", req.body.id, req.body.name, req.body.area_id, req.body.ordernumber).then(function(val){
+  updateAsyncFunction("station", req.body.id, req.body.name, req.body.area_id).then(function(val){
     res.json(val);
   });
 });
@@ -385,7 +385,7 @@ app.listen(port, () => console.log(`App listening on port ${port}!`));
 // Für die App
 // Tutorial: https://stackabuse.com/reading-and-writing-json-files-with-node-js/
 
-// Für die Connection auf die DB -- GET ALL
+
 async function appAsyncFunction() {
   let conn;
   let rows;
@@ -543,19 +543,27 @@ let areas = await appAsyncFunction("AREA", tour[0].id);
   });
   archive.pipe(output);
 
-  archive.append(data, {'name': "route.json"});
+  var dir = 'tempdir';
+  if (!fs.existsSync(dir)){
+    fs.mkdirSync(dir);
+  }
+
+  fs.writeFileSync(dir + '/route.json', data);
+  archive.directory('tempdir/', 'tour_' + result.id);
+
+  // archive.append(data, {'name': "route.json"});
   archive.finalize();
 });
 
 // noch prüfen
-app.get('/downloadfile/:filename', function(req, res){
-  const file = `${__dirname}/media/` + req.params.filename;
-  console.log(file);
-  res.download(file); // Set disposition and send it.
-});
+// app.get('/downloadfile/:filename', function(req, res){
+//   const file = `${__dirname}/media/` + req.params.filename;
+//   console.log(file);
+//   res.download(file); // Set disposition and send it.
+// });
 
-app.get('/download/:id', function(req, res){
-  const tour = `${__dirname}/tourszip/tour_` + req.params.id + '.zip';
+app.get('/download/:filename', function(req, res){
+  const tour = `${__dirname}/tourszip/` + req.params.filename;
   console.log(tour);
   res.download(tour); // Set disposition and send it.
 });
