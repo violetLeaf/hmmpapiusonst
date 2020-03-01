@@ -40,7 +40,7 @@ async function getAsyncFunction() {
   try {
     conn = await pool.getConnection();
     if (arguments[0] == "stations4T"){
-      rows = await conn.query("SELECT DISTINCT tour_id, station_id, ordernumber FROM `tour_has_station` JOIN `station` ON `station`.`id` = `tour_has_station`.`station_id` WHERE `tour_id` = " + arguments[1] + " ORDER BY `ordernumber`;");
+      rows = await conn.query("SELECT DISTINCT tour_id, station_id, ordernumber, station.* FROM `tour_has_station` JOIN `station` ON `station`.`id` = `tour_has_station`.`station_id` WHERE `tour_id` = " + arguments[1] + " ORDER BY `ordernumber`;");
     }
     else if (arguments[0] == "media4S4T"){
       rows = await conn.query("SELECT * FROM `media` JOIN tour_has_station ON tour_has_station.media_id WHERE tour_has_station.station_id = " + arguments[1] + " AND media.station_id = " + arguments[1] + 
@@ -50,6 +50,13 @@ async function getAsyncFunction() {
     else if (arguments[0] == "media4Station"){
       rows = await conn.query("SELECT media.id, `caption`, `language_id`, text.text, file.destinationurl FROM `media`"
       + " LEFT JOIN file ON file.id = media.file_id LEFT JOIN `TEXT` ON `text`.`id` = `media`.`text_id` WHERE `station_id` = " + arguments[1] + ";");
+    }
+    else if (arguments[0] == "stations4Template"){
+      rows = await conn.query("SELECT DISTINCT template_id, station_id, ordernumber, station.* FROM `template_has_station` JOIN `station` ON `station`.`id` = `template_has_station`.`station_id` WHERE `template_id` = " + arguments[1] + " ORDER BY `ordernumber`;");
+    }
+    else if (arguments[0] == "media4S4Template"){
+      rows = await conn.query("SELECT * FROM `media` JOIN template_has_station ON template_has_station.media_id WHERE template_has_station.station_id = " + arguments[1] + " AND media.station_id = " + arguments[1] + 
+      " AND template_has_station.template_id = " + arguments[2] + ";");
     }
     return rows;
   } catch (err) {
@@ -69,13 +76,24 @@ async function postAsyncFunction(){
 
     // TOUR
     if (arguments[0] == "tour"){
-      rows = await conn.query('INSERT INTO TOUR (title, reversible, template_id, guide, date) values (?, ?, ?, ?, ?)', 
-        [arguments[1], arguments[2], arguments[3], arguments[4], arguments[5]]);
+      rows = await conn.query('INSERT INTO TOUR (title, reversible, template_id, guide, date, language_id) values (?, ?, ?, ?, ?, ?)', 
+        [arguments[1], arguments[2], arguments[3], arguments[4], arguments[5], arguments[6]]);
 
-        
+    // Tour has Station
     } else if (arguments[0] == "tourhstation"){
+      id = await conn.query('SELECT * FROM `media` WHERE id=' + arguments[2] + ';');
       rows = await conn.query('INSERT INTO TOUR_HAS_STATION (tour_id, station_id, media_id, ordernumber) values (?, ?, ?, ?)', 
-        [arguments[1], arguments[2], arguments[3], arguments[4]]);
+        [arguments[1], id[0].station_id, arguments[2], arguments[3]]);
+    
+    // Template
+    } else if (arguments[0] == "template"){
+      rows = await conn.query('INSERT INTO TEMPLATE (title) values (?)', [arguments[1]]);
+
+    // Template has Station
+    } else if (arguments[0] == "templatehstation"){
+      id = await conn.query('SELECT * FROM `media` WHERE id=' + arguments[2] + ';');
+      rows = await conn.query('INSERT INTO TEMPLATE_HAS_STATION (template_id, station_id, media_id, ordernumber) values (?, ?, ?, ?)', 
+        [arguments[1], id[0].station_id, arguments[2], arguments[3]]);
     
     // STATION
     } else if (arguments[0] == "station"){
@@ -138,8 +156,35 @@ async function updateAsyncFunction(){
       rows = await conn.query('UPDATE `area` SET  `position`="' + arguments[3] + '" WHERE id=' + arguments[2] + ";");
     }
 
-    else if (arguments[0] = "station"){
+    else if (arguments[0] == "station"){
       rows = await conn.query('UPDATE `station` SET `name`="' + arguments[2] + '", `area_id`=' + arguments[3] + ' WHERE id=' + arguments[1] + ";");
+    }
+
+    else if (arguments[0] == "tour"){
+      rows = await conn.query('UPDATE `tour` SET `title`="' + arguments[2] + '", `reversible`=' + arguments[3] + ', `guide`="' + arguments[4] +
+      '", `date`="' + arguments[5] + '", `template_id`=' + arguments[6] + ', `language_id`=' + arguments[7] + ' WHERE id=' + arguments[1] + ';');
+    }
+
+    else if (arguments[0] == "tourstationpos"){
+      // Put Surrounding in Place:
+      rows = await conn.query('UPDATE `tour_has_station` SET `ordernumber`=' + arguments[4] + ' WHERE tour_id=' + arguments[2] + ' AND ordernumber=' +
+      (arguments[1] == "up" ? arguments[4] -1: arguments[4] +1) + ';');
+      // Put the actual station in place:
+      rows = await conn.query('UPDATE `tour_has_station` SET `ordernumber`=' + (arguments[1] == "up" ? arguments[4] -1: arguments[4] +1) +
+      ' WHERE tour_id=' + arguments[2] + ' AND station_id=' + arguments[3] +  ";");
+    }
+
+    else if (arguments[0] == "template"){
+      rows = await conn.query('UPDATE `template` SET `title`="' + arguments[2] + '";');
+    }
+
+    else if (arguments[0] == "templatestationpos"){
+      // Put Surrounding in Place:
+      rows = await conn.query('UPDATE `template_has_station` SET `ordernumber`=' + arguments[4] + ' WHERE template_id=' + arguments[2] + ' AND ordernumber=' +
+      (arguments[1] == "up" ? arguments[4] -1: arguments[4] +1) + ';');
+      // Put the actual station in place:
+      rows = await conn.query('UPDATE `template_has_station` SET `ordernumber`=' + (arguments[1] == "up" ? arguments[4] -1: arguments[4] +1) +
+      ' WHERE template_id=' + arguments[2] + ' AND station_id=' + arguments[3] +  ";");
     }
 
     else{
@@ -167,6 +212,25 @@ async function deleteAsyncFunction(table, id){
       // auf anderen Tabellen löschen
       if (table == "TOUR"){
         rows = await conn.query("DELETE FROM TOUR_HAS_STATION WHERE tour_id=" + id + ";");
+        // -----------------------------------------------------------------------------------
+      } else if (table == "TOURZW"){
+        rows = await conn.query("DELETE FROM TOUR_HAS_STATION WHERE tour_id=" + id + ";");
+        return rows;
+        // -----------------------------------------------------------------------------------
+      } else if (table == "TOURZWMEDIA"){
+        rows = await conn.query("DELETE FROM TOUR_HAS_STATION WHERE station_id=" + id + ";");
+        return rows;
+        // -----------------------------------------------------------------------------------
+      } else if (table == "TEMPLATE"){
+        rows = await conn.query("DELETE FROM TEMPLATE_HAS_STATION WHERE template_id=" + id + ";");
+        // -----------------------------------------------------------------------------------
+      } else if (table == "TEMPLATEZW"){
+        rows = await conn.query("DELETE FROM TEMPLATE_HAS_STATION WHERE template_id=" + id + ";");
+        return rows;
+        // -----------------------------------------------------------------------------------
+      } else if (table == "TEMPLATEZWMEDIA"){
+        rows = await conn.query("DELETE FROM TEMPLATE_HAS_STATION WHERE station_id=" + id + ";");
+        return rows;
         // -----------------------------------------------------------------------------------
       } else if (table == "STATION"){
         media = await conn.query("SELECT `file_id`, `text_id` FROM `media` WHERE `station_id`=" + id + ";");
@@ -284,9 +348,23 @@ app.get('/mediasforstationsfortour/:idS/:idT', cors(), (req, res) => {
   });
 });
 
-// Medias when in Station when in Tour
+// Medias when in Station when in Tour or Template
 app.get('/mediasforstation/:id', cors(), (req, res) => {
   getAsyncFunction("media4Station", req.params.id).then(function(val){
+      res.json(val);
+  });
+});
+
+// Stations when in Template
+app.get('/stationsfortemplate/:id', cors(), (req, res) => {
+  getAsyncFunction("stations4Template", req.params.id).then(function(val){
+    res.json(val);
+  });
+});
+
+// Medias when in Station when in Template
+app.get('/mediasforstationsfortemplate/:idS/:idT', cors(), (req, res) => {
+  getAsyncFunction("media4S4Template", req.params.idS, req.params.idT).then(function(val){
       res.json(val);
   });
 });
@@ -326,13 +404,26 @@ app.post('/posttext', cors(), (req, res) => {
 
 // Tour & Zw.-Tabelle
 app.post('/posttour', cors(), (req, res) => {
-  postAsyncFunction("tour", req.body.title, req.body.reversible, req.body.template_id, req.body.guide, req.body.date).then(function(val){
+  postAsyncFunction("tour", req.body.title, req.body.reversible, req.body.template_id, req.body.guide, req.body.date, req.body.language_id).then(function(val){
     res.json(val);
   });
 });
 
 app.post('/posttourstations', cors(), (req, res) => {
-  postAsyncFunction("tourhstation", req.body.tour_id, req.body.station_id, req.body.media_id, req.body.ordernumber).then(function(val){
+  postAsyncFunction("tourhstation", req.body.tour_id, req.body.media_id, req.body.ordernumber).then(function(val){
+    res.json(val);
+  });
+});
+
+// Template & Zw.-Tabelle
+app.post('/posttemplate', cors(), (req, res) => {
+  postAsyncFunction("template", req.body.title).then(function(val){
+    res.json(val);
+  });
+});
+
+app.post('/posttemplatestations', cors(), (req, res) => {
+  postAsyncFunction("templatehstation", req.body.template_id, req.body.media_id, req.body.ordernumber).then(function(val){
     res.json(val);
   });
 });
@@ -364,6 +455,34 @@ app.put('/updateareapos', cors(), (req, res) =>{
 // Station
 app.put('/updatestation', cors(), (req, res) =>{
   updateAsyncFunction("station", req.body.id, req.body.name, req.body.area_id).then(function(val){
+    res.json(val);
+  });
+});
+
+// Tour
+app.put('/updatetour', cors(), (req, res) =>{
+  updateAsyncFunction("tour", req.body.id, req.body.title, req.body.reversible, req.body.guide, req.body.date, req.body.template_id, req.body.language_id).then(function(val){
+    res.json(val);
+  });
+});
+
+// Update Tour > Station Position
+app.put('/updatetourstationpos', cors(), (req, res) =>{
+  updateAsyncFunction("tourstationpos", req.body.direction, req.body.tour_id, req.body.station_id, req.body.ordernumber).then(function(val){
+    res.json(val);
+  });
+});
+
+// Template
+app.put('/updatetemplate', cors(), (req, res) =>{
+  updateAsyncFunction("template", req.body.id, req.body.title).then(function(val){
+    res.json(val);
+  });
+});
+
+// Update Template > Station Position
+app.put('/updatetemplatestationpos', cors(), (req, res) =>{
+  updateAsyncFunction("templatestationpos", req.body.direction, req.body.template_id, req.body.station_id, req.body.ordernumber).then(function(val){
     res.json(val);
   });
 });
@@ -439,14 +558,13 @@ async function appAsyncFunction() {
 }
 
 // -------------------------------------------------------------------------------------------------------
-// GET all Touren
 let data;
-
-app.get('/toursapp', cors(), (req, res) => {
-  appAsyncFunction("TOUR").then(function(val){ // ruft die funktion auf und wenn fertig (then), dann wird die funktion mit den return wert von der funktion gemacht und der wert mit val ausgegeben
-    res.json(val);
-  });
-});
+// Get all Tours
+// app.get('/toursapp', cors(), (req, res) => {
+//   appAsyncFunction("TOUR").then(function(val){ // ruft die funktion auf und wenn fertig (then), dann wird die funktion mit den return wert von der funktion gemacht und der wert mit val ausgegeben
+//     res.json(val);
+//   });
+// });
 
 // GET each Tour
 app.get('/tourapp/:id', cors(), async (req, res) => {
@@ -546,9 +664,12 @@ let areas = await appAsyncFunction("AREA", tour[0].id);
   var dir = 'tempdir';
   if (!fs.existsSync(dir)){
     fs.mkdirSync(dir);
+    fs.mkdirSync(dir + "/media");
   }
 
   fs.writeFileSync(dir + '/route.json', data);
+  // an dieser Stelle: in den tempdir/media, die Files hineinkopieren
+
   archive.directory('tempdir/', 'tour_' + result.id);
 
   // archive.append(data, {'name': "route.json"});

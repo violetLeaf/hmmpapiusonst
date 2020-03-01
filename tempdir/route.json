@@ -1,9 +1,66 @@
 {
-  "id": 50,
-  "title": "Kunde",
+  "id": 71,
+  "title": "Standard Tour",
   "reversible": 0,
   "template_id": null,
-  "guide": "asdfasdf",
-  "date": "2020-02-26T21:12:00.000Z",
-  "areas": []
+  "guide": "",
+  "date": "2020-03-01T01:42:00.000Z",
+  "areas": [
+    {
+      "id": 13,
+      "title": "Area A",
+      "position": 1,
+      "stations": [
+        {
+          "id": 70,
+          "name": "Maschine A",
+          "medias": [
+            {
+              "id": 107,
+              "type": "text",
+              "caption": "",
+              "text": "asdfasdfasdfasdfasdfasdf"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": 14,
+      "title": "Area B",
+      "position": 2,
+      "stations": [
+        {
+          "id": 71,
+          "name": "Maschine B",
+          "medias": [
+            {
+              "id": 108,
+              "type": "text",
+              "caption": "",
+              "text": "asdfasdfasdfasdfasdfasdf"
+            },
+            {
+              "id": 110,
+              "type": "text",
+              "caption": "",
+              "text": "retwertwerztzerztr"
+            },
+            {
+              "id": 109,
+              "type": "text",
+              "caption": "",
+              "text": "asdfasdfasdf"
+            },
+            {
+              "id": 111,
+              "type": "text",
+              "caption": "",
+              "text": "asdfasdfasdfasdfasdfasdfasdfasdfasdfasdfasdfasdfasdfasdfasdfasdfasdfasdfasdfasdfasdf"
+            }
+          ]
+        }
+      ]
+    }
+  ]
 }
